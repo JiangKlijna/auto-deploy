@@ -1,0 +1,18 @@
+
+server:
+  name: jiang-pc
+  port: 2022
+  username: admin
+  password: auto-deploy
+  content-path: /auto-deploy
+  backup-path: /temp/backup
+  upload-path: /temp/upload
+
+projects:
+
+  auto-deploy:
+    description: auto-deploy
+    dir: /temp/auto-deploy
+    actions:
+      start: /temp/auto-deploy.start
+      stop: /temp/auto-deploy.stop

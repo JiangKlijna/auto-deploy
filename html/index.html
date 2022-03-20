@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <title>{{.server.Name}}</title>
+    <link href="static/icon.svg" type="image/x-icon" />
+    <link href="static/mdui/css/mdui.min.css" rel="stylesheet">
+    <script src="static/mdui/js/mdui.min.js"></script>
+    <script src="static/pnglib.min.js"></script>
+    <script src="static/identicon.min.js"></script>
+    <script src="static/md5.min.js"></script>
+</head>
+
+<body>
+<div id="app">
+    <div id="main">
+        <div id="menu" class="app_title mdui-toolbar mdui-color-theme mdui-ripple mdui-shadow-8">
+            <a class="mdui-btn mdui-btn-icon" onclick="call('login')"><i class="mdui-icon material-icons">power_settings_new</i></a>
+            <span class="mdui-typo-title">{{.server.Name}}</span>
+            <div class="mdui-toolbar-spacer"></div>
+            <a id="change-color" class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">color_lens</i></a>
+        </div>
+        <div class="app-body mdui-container">
+            <ul class="mdui-list">
+                {{ range $key, $value := .projects }}
+                <li class="mdui-list-item mdui-ripple">
+                    <div class="mdui-list-item-avatar">
+                        <img data-name="{{$value.Name}}"/>
+                    </div>
+                    <div class="mdui-list-item-content" style="text-align: left">
+                        <div class="mdui-list-item-title mdui-text-color-theme-text">{{$value.Name}}</div>
+                        <div class="mdui-list-item-text mdui-list-item-one-line">
+                            {{$value.Description}}
+                        </div>
+                    </div>
+                </li>
+                <div class="mdui-divider"></div>
+                {{ end }}
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+<link href="static/style.min.css" rel="stylesheet">
+<script src="static/style.min.js"></script>
+<script>
+    /* init images & click to project.html */
+    mdui.$(".mdui-list-item").each(function (i, e){
+        var img = mdui.$(e).find("img");
+        var name = img.data("name");
+        var data = new Identicon(md5(name), 120).toString();
+        img.attr("src", "data:image/png;base64,"+ data);
+
+        e.onclick = function () {
+            location.href += md5(name + "{{.secret}}" + name)
+        }
+    });
+    /* call action by post ajax */
+    function call(action) {
+        mdui.$.ajax({
+            url: location.href,
+            method: "POST",
+            headers: {action: md5(action + "{{.secret}}" + action)},
+            success: function () {
+                location.reload();
+            },
+            error: function () {
+                alert("network error!");
+            }
+        });
+    }
+    /* Hang up for one hour then auto logout */
+    setTimeout(call, 1000*60*60, 'login');
+</script>
+</html>

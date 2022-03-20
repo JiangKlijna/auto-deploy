@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+    {{ if .isProject }}
+    <title>{{.server.Name}}·{{.project.Name}}</title>
+    <title>{{.server.Name}}</title>
+    {{ end }}
+    <link href="static/icon.svg" rel="icon" type="image/x-icon" />
+    <link href="static/mdui/css/mdui.min.css" rel="stylesheet">
+    <script src="static/mdui/js/mdui.min.js"></script>
+    <script src="static/pnglib.min.js"></script>
+    <script src="static/identicon.min.js"></script>
+    <script src="static/md5.min.js"></script>
+</head>
+<style>
+    .list-group {
+        padding-left: 0;
+        margin: 20px;
+    }
+
+    .list-group-item {
+        position: relative;
+        display: block;
+        padding: 8px;
+        margin-bottom: -1px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+    }
+
+    .list-group-item:first-child {
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+    }
+
+    .list-group-item:last-child {
+        border-bottom-left-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+
+    .list-group-item .title-name {
+        height: 36px;
+        line-height: 36px;
+        display: block;
+        padding: 0 1em;
+        font-weight: 600;
+        font-size: 1.2em;
+    }
+
+    .list-group-item .action {
+        float: right;
+        line-height: 36px;
+        padding: 0 10px;
+    }
+
+    .list-group-item textarea {
+        width: 100%;
+        resize: none;
+        border: none;
+        outline: none;
+    }
+
+    @-webkit-keyframes spin {
+        from {
+            -webkit-transform: rotate(0deg);
+        }
+        to {
+            -webkit-transform: rotate(360deg);
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .spin {
+        -webkit-animation: spin 1s linear 1s 5 alternate;
+        animation: spin 1s linear infinite;
+    }
+</style>
+<script>
+    function back() {
+        var arr = location.href.split("/");
+        arr.pop();
+        location.href = arr.join("/");
+    }
+</script>
+
+<body>
+<div id="app">
+    <div id="main">
+        <div id="menu" class="app_title mdui-toolbar mdui-color-theme mdui-ripple mdui-shadow-8">
+            <a class="mdui-btn mdui-btn-icon" onclick="back()"><i class="mdui-icon material-icons">arrow_back</i></a>
+            {{ if .isProject }}
+            <span class="mdui-typo-title">{{.project.Name}}</span>
+            {{ else }}
+            <span class="mdui-typo-title"></span>
+            {{ end }}
+            <div class="mdui-toolbar-spacer"></div>
+            <a id="change-color" class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">color_lens</i></a>
+        </div>
+        {{ if .isProject }}
+        <div class="app-body mdui-container">
+            <ul class="list-group">
+                {{ range $key, $value := .project.Actions }}
+                <li class="list-group-item" data-name="{{ $key }}">
+                    <div style="text-align: left">
+                        <label class="mdui-checkbox mdui-ripple" style="padding-left:0"><span class="title-name">{{ $key }}</span></label>
+                        <i class="mdui-icon material-icons mdui-ripple mdui-text-color-theme action"
+                           onclick="start(this.parentElement.parentElement)">toys</i>
+                    </div>
+                    <div class="result" style="display: none">
+                        <div class="mdui-progress">
+                            <div class="mdui-progress-indeterminate"></div>
+                        </div>
+                        <div class="mdui-divider"></div>
+                        <textarea readonly></textarea>
+                    </div>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+        <script>
+            /* click and select file */
+            var SelectFile = function () {
+                function createObjectURL(object) {
+                    return (window.webkitURL) ? window.webkitURL.createObjectURL(object) : window.URL.createObjectURL(object);
+                }
+                var self = {};
+                self.getFile = function (cb, accept) {
+                    var fileselect = document.createElement("input");
+                    fileselect.type = "file";
+                    fileselect.accept = accept;
+                    fileselect.onchange = function () {
+                        var f = createObjectURL(fileselect.files[0]);
+                        cb(f, fileselect.files[0]);
+                        fileselect.onchange = undefined;
+                    };
+                    fileselect.click();
+                };
+                return self;
+            }();
+            /* connect to websocket */
+            function connect(li, action) {
+                return new Promise((resolution, rejection) => {
+                    try {
+                        var text = li.find("textarea")[0];
+
+                        var skt = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + location.pathname + "/" + md5(action + "{{.secret}}" + action));
+                        skt.binaryType = "blob";
+                        skt.onopen = function () {
+                            text.innerHTML = "";
+                            if (action === "upload") {
+                                var file = li[0].upload_file;
+                                skt.send(file);
+                            }
+                        };
+                        skt.onclose = function (e) {
+                            resolution(e);
+                        };
+                        skt.onmessage = function (msg) {
+                            const reader = new FileReader();
+                            reader.readAsText(msg.data, "UTF8");
+                            reader.onload = (e) => {
+                                text.append(reader.result);
+                                text.style.height = text.scrollHeight + 'px';
+                            }
+                        };
+                    } catch (e) {
+                        rejection(e);
+                    }
+                });
+            }
+            /* upload action select file */
+            function start(li) {
+                var $li = mdui.$(li);
+                var action = $li.data("name");
+                var isUpload = action === "upload";
+                if (isUpload) {
+                    SelectFile.getFile(function (url, file) {
+                        li.upload_url = url;
+                        li.upload_file = file;
+                        realStart($li, action);
+                    }, "*");
+                } else {
+                    realStart($li, action);
+                }
+            }
+            /* start websocket action */
+            async function realStart($li) {
+                mdui.$("#toys").remove();
+                $li.find(".action").addClass("spin");
+                $li.find(".result").css("display", "block");
+                await connect($li, $li.data("name"));
+                $li.find(".mdui-progress").hide();
+                $li.find(".action").removeClass("spin");
+            }
+        </script>
+        {{ else }}
+        <script>
+            back();
+        </script>
+        {{ end }}
+    </div>
+</div>
+</body>
+<link href="static/style.min.css" rel="stylesheet">
+<script src="static/style.min.js"></script>
+</html>

@@ -1,0 +1,29 @@
+# IntelliJ project files
+.idea
+*.iml
+*.log
+gen/
+out/
+pkg/
+test/
+build/
+target/
+
+# Binaries for programs and plugins
+*.out
+*.exe
+*.exe~
+*.dll
+*.so
+*.a
+*.lib
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+auto-deploy*
+
+# resource
+r.go
+mdui/

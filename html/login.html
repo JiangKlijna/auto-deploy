@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <title>{{.server.Name}}</title>
+    <link href="static/icon.svg" rel="icon" type="image/x-icon" />
+    <link href="static/mdui/css/mdui.min.css" rel="stylesheet">
+    <script src="static/mdui/js/mdui.min.js"></script>
+    <script src="static/md5.min.js"></script>
+</head>
+
+<body>
+<div id="app">
+    <div id="main">
+        <div id="menu" class="app_title mdui-toolbar mdui-color-theme mdui-ripple mdui-shadow-8">
+            <a class="mdui-btn mdui-btn-icon"><img class="mdui-icon" src="static/icon.svg"></a>
+            <span class="mdui-typo-title">{{.server.Name}}</span>
+            <div class="mdui-toolbar-spacer"></div>
+            <a id="change-color" class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">color_lens</i></a>
+        </div>
+        <div class="app-body mdui-container">
+            <div style="transform: translateY(50%);text-align: left">
+                <div class="mdui-textfield">
+                    <i class="mdui-icon material-icons">account_circle</i>
+                    <input id="username" class="mdui-textfield-input" required maxlength="30"/>
+                    <div class="mdui-textfield-error">null</div>
+                </div>
+                <br><br>
+                <div class="mdui-textfield">
+                    <i class="mdui-icon material-icons">lock</i>
+                    <input id="password" class="mdui-textfield-input" type="password" required maxlength="30"/>
+                    <div class="mdui-textfield-error">null</div>
+                </div>
+                <br><br>
+                <div class="mdui-row">
+                    <div class="mdui-col-xs-2"></div>
+                    <div class="mdui-col-xs-8">
+                        <button class="mdui-btn mdui-btn-block mdui-color-theme mdui-ripple mdui-shadow-8" onclick="login()">login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<link href="static/style.min.css" rel="stylesheet">
+<script src="static/style.min.js"></script>
+<script>
+    document.onkeydown = function (e) {
+        if (e && e.keyCode === 13) {
+            login();
+        }
+    };
+    function login() {
+        var username = mdui.$("#username").val();
+        var password = mdui.$("#password").val();
+        if (username === "") return alert("null");
+        if (password === "") return alert("null");
+        mdui.$.ajax({
+            url: location.href,
+            method: "POST",
+            data: {token: md5("{{.secret}}" + md5(username + "{{.secret}}" + password) + "{{.secret}}")},
+            headers: {action: md5("login" + "{{.secret}}" + "login")},
+            success: function (res) {
+                try {
+                    var obj = JSON.parse(res);
+                    if (obj.code === 0) {
+                        location.reload();
+                    } else {
+                        alert(obj.msg);
+                    }
+                } catch (e) {
+                    alert(e.message);
+                }
+            },
+            error: function () {
+                alert("network error!");
+            }
+        });
+    }
+</script>
+</html>
