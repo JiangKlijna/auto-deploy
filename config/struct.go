@@ -16,6 +16,7 @@ type ServerConfig struct {
 	Port        string
 	Username    string
 	Password    string
+	Encoding    string
 	ContentPath string `yaml:"content-path"`
 	BackupPath  string `yaml:"backup-path"`
 	UploadPath  string `yaml:"upload-path"`

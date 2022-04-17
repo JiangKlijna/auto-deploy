@@ -9,7 +9,7 @@ import (
 )
 
 const Version = "1.0"
-const ServerName = "auto-deploy-" + Version
+const ServerName = "ad-" + Version
 
 var (
 	Server   ServerConfig
@@ -38,13 +38,17 @@ func init() {
 
 	configFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		println(err.Error())
+		println("read the configuration file", filename, "error:", err.Error())
 		os.Exit(1)
 	}
 	var Config = new(config)
 	err = yaml.Unmarshal(configFile, &Config)
 	if err != nil {
-		println(err.Error())
+		println("configuration file", filename, "syntax is bad. error:", err.Error())
+		os.Exit(1)
+	}
+	if test {
+		println("configuration file", filename, "is successful")
 		os.Exit(1)
 	}
 	Server = Config.Server

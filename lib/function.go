@@ -31,13 +31,12 @@ func ReverseString(s string) string {
 }
 
 // Zip Compress
-func Zip(srcDir, zipFile string, callback func(string)) {
+func Zip(srcDir, zipFile string, callback func(string)) error {
 	os.MkdirAll(path.Dir(zipFile), 0666)
 	zipfile, err := os.Create(zipFile)
 	if err != nil {
-		callback("open file error " + zipFile + "\n")
-		callback(err.Error())
-		return
+		callback("open file error " + zipFile)
+		return err
 	}
 	defer zipfile.Close()
 
@@ -46,11 +45,14 @@ func Zip(srcDir, zipFile string, callback func(string)) {
 	defer archive.Close()
 
 	// foreach dir
-	filepath.Walk(srcDir, func(path string, info os.FileInfo, _ error) error {
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, _ error) error {
 		if path == srcDir {
 			return nil
 		}
-		header, _ := zip.FileInfoHeader(info)
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
 		header.Name = strings.TrimPrefix(path, srcDir+`\`)
 		if info.IsDir() {
 			header.Name += `/`
@@ -59,14 +61,18 @@ func Zip(srcDir, zipFile string, callback func(string)) {
 		}
 		writer, err := archive.CreateHeader(header)
 		if err != nil {
-			callback(header.Name + " zip compress error is " + err.Error() + "\n")
-		} else {
-			callback(header.Name + " zip compress success." + "\n")
+			return err
 		}
 		if !info.IsDir() {
-			file, _ := os.Open(path)
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
 			defer file.Close()
-			io.Copy(writer, file)
+			_, err = io.Copy(writer, file)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})

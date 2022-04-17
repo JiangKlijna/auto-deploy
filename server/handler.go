@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -143,61 +144,79 @@ func (s *AutoDeployServer) GetHandler(w http.ResponseWriter, r *http.Request, is
 			return
 		}
 		defer conn.Close()
+		r.Method = "WEBSOCKET"
 		WebsocketHandler(conn, &s.Server, project, action)
 	}
 }
 
 // WebsocketHandler call action
 func WebsocketHandler(conn *websocket.Conn, server *config.ServerConfig, project *config.Project, action *config.Action) {
+	sendBytes := func(data []byte) {
+		err := conn.WriteMessage(websocket.BinaryMessage, data)
+		if err != nil {
+			log.Println(project.Name, action.Name, action.Shell, "conn.WriteMessage() error:", err.Error())
+		}
+	}
+	send := func(data string) { sendBytes([]byte(data + "\n")) }
 	if action.Name == "upload" {
-		var r io.Reader
 		_, r, err := conn.NextReader()
 		if err != nil {
-			println(err.Error())
+			log.Println(project.Name, action.Name, action.Shell, "first upload file error:", err.Error())
+			send("first upload file error:" + err.Error())
 			return
 		}
 		uploadFile := path.Join(server.UploadPath, project.GetFileName("upload", "zip"))
 		err = lib.OutputFile(r, uploadFile)
 		if err != nil {
-			println(err.Error())
+			log.Println(project.Name, action.Name, action.Shell, "upload file to", uploadFile, "error:", err.Error())
+			send("upload file to " + uploadFile + " error: " + err.Error())
 			return
 		}
+		send("upload file success dir is " + uploadFile)
 		zipReader, err := zip.OpenReader(uploadFile)
 		if err != nil {
-			println(err.Error())
+			log.Println(project.Name, action.Name, action.Shell, "upload file is not zip error:", err.Error())
+			send("upload file is not zip error:" + err.Error())
 			return
 		}
 		defer zipReader.Close()
 		err = lib.DeleteDirElseSelf(*project.Dir)
 		if err != nil {
-			conn.WriteMessage(websocket.BinaryMessage, []byte("delete project dir error "+err.Error()))
+			log.Println(project.Name, action.Name, action.Shell, "delete project dir error:", err.Error())
+			send("delete project dir error:" + err.Error())
 			return
 		}
-		conn.WriteMessage(websocket.BinaryMessage, []byte("delete project dir success dir is "+*project.Dir+"\n"))
-
+		send("delete project dir success dir is " + *project.Dir)
 		err = lib.Unzip(zipReader, *project.Dir)
 		if err != nil {
-			conn.WriteMessage(websocket.BinaryMessage, []byte("unzip upload file error "+err.Error()))
+			log.Println(project.Name, action.Name, action.Shell, "unzip upload file error:", err.Error())
+			send("unzip upload file error:" + err.Error())
 			return
 		}
-		conn.WriteMessage(websocket.BinaryMessage, []byte("unzip upload file success dir is "+*project.Dir+"\n"))
+		send("unzip upload file success dir is " + *project.Dir)
 		return
 	} else if action.Name == "backup" {
-		lib.Zip(*project.Dir, path.Join(server.BackupPath, project.GetFileName("backup", "zip")), func(s string) {
-			conn.WriteMessage(websocket.BinaryMessage, []byte(s))
-		})
+		backup := path.Join(server.BackupPath, project.GetFileName("backup", "zip"))
+		err := lib.Zip(*project.Dir, backup, send)
+		if err != nil {
+			send(project.Name + "backup failure. error is " + err.Error())
+		} else {
+			send(project.Name + "backup success. dir is " + backup)
+		}
 		return
 	}
 
 	cmd := shell.ExecShell(action.Shell)
 	stdOut, err := cmd.StdoutPipe()
 	if err != nil {
-		conn.WriteMessage(websocket.BinaryMessage, []byte(err.Error()))
+		log.Println(project.Name, action.Name, action.Shell, "cmd.StdoutPipe() error:", err.Error())
+		send("cmd::StdoutPipe error: " + err.Error())
 		return
 	}
 	err = cmd.Start()
 	if err != nil {
-		conn.WriteMessage(websocket.BinaryMessage, []byte(err.Error()))
+		log.Println(project.Name, action.Name, action.Shell, "cmd.Start() error:", err.Error())
+		send("cmd::Start error: " + err.Error())
 		return
 	}
 
@@ -206,10 +225,10 @@ func WebsocketHandler(conn *websocket.Conn, server *config.ServerConfig, project
 		n, err := stdOut.Read(buf)
 		//time.Sleep(time.Second)
 		if err != nil {
-			conn.WriteMessage(websocket.BinaryMessage, []byte("Error ReadPtyAndWriteSkt cmd read failed: "+err.Error()))
+			log.Println(project.Name, action.Name, action.Shell, "execution ends.")
 			return
 		}
-		conn.WriteMessage(websocket.BinaryMessage, buf[:n])
+		sendBytes(buf[:n])
 	}
 }
 
@@ -219,6 +238,7 @@ func ContentPathHandler(contentpath string, next http.HandlerFunc) http.Handler 
 		p := strings.TrimPrefix(r.URL.Path, contentpath)
 		r.URL.Path = p
 		r.RequestURI = p
+		w.Header().Set("Version", config.ServerName)
 		next.ServeHTTP(w, r)
 	})
 }

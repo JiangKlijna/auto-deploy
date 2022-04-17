@@ -10,8 +10,6 @@
     <link href="static/icon.svg" rel="icon" type="image/x-icon" />
     <link href="static/mdui/css/mdui.min.css" rel="stylesheet">
     <script src="static/mdui/js/mdui.min.js"></script>
-    <script src="static/pnglib.min.js"></script>
-    <script src="static/identicon.min.js"></script>
     <script src="static/md5.min.js"></script>
 </head>
 <style>
@@ -166,7 +164,7 @@
                         };
                         skt.onmessage = function (msg) {
                             const reader = new FileReader();
-                            reader.readAsText(msg.data, "UTF8");
+                            reader.readAsText(msg.data, "{{.server.Encoding}}");
                             reader.onload = (e) => {
                                 text.append(reader.result);
                                 text.style.height = text.scrollHeight + 'px';

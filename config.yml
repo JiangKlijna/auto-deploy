@@ -4,6 +4,7 @@ server:
   port: 2022
   username: admin
   password: auto-deploy
+  encoding: UTF-8
   content-path: /auto-deploy
   backup-path: /temp/backup
   upload-path: /temp/upload
