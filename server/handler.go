@@ -144,7 +144,7 @@ func (s *AutoDeployServer) GetHandler(w http.ResponseWriter, r *http.Request, is
 			return
 		}
 		defer conn.Close()
-		r.Method = "WEBSOCKET"
+		r.Method = "WS"
 		WebsocketHandler(conn, &s.Server, project, action)
 	}
 }
@@ -219,6 +219,7 @@ func WebsocketHandler(conn *websocket.Conn, server *config.ServerConfig, project
 		send("cmd::Start error: " + err.Error())
 		return
 	}
+	defer cmd.Wait()
 
 	buf := make([]byte, 4096)
 	for {

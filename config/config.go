@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -36,7 +35,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	configFile, err := ioutil.ReadFile(filename)
+	configFile, err := os.ReadFile(filename)
 	if err != nil {
 		println("read the configuration file", filename, "error:", err.Error())
 		os.Exit(1)
