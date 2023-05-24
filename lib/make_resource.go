@@ -23,7 +23,7 @@ func DownloadMdui() {
 		panic("download mdui error " + err.Error())
 	}
 	defer res.Body.Close()
-	mdui, err := ioutil.TempFile("", "mdui*.zip")
+	mdui, err := os.CreateTemp("", "mdui*.zip")
 	if err != nil {
 		panic("create tmp file error " + err.Error())
 	}

@@ -9,9 +9,8 @@
 ```bash
 git clone github.com/jiangklijna/auto-deploy
 cd auto-deploy
-go run build.go
-go build -ldflags "-s -w" -o auto-deploy main.go
-go build -ldflags "-s -w" -o auto-deploy.exe main.go
+go run make/build.go
+go build -ldflags "-s -w"
 ```
 ### from release
 [releases](https://github.com/JiangKlijna/auto-deploy/releases)

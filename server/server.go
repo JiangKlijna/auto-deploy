@@ -2,7 +2,7 @@ package server
 
 import (
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -55,7 +55,7 @@ func (s *AutoDeployServer) GetTemplate(name string) *template.Template {
 		if err != nil {
 			panic(err)
 		}
-		readAll, err := ioutil.ReadAll(f)
+		readAll, err := io.ReadAll(f)
 		if err != nil {
 			panic(err)
 		}
